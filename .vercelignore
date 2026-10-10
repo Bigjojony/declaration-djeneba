@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.vercel/
+.astro/
+_sources/
+dev/
+
+# env (ne jamais déployer les secrets)
+.env
+.env.*
+!.env.example
+
+# divers
+*.log
+.DS_Store

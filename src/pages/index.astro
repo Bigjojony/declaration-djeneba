@@ -1,0 +1,494 @@
+---
+// Page principale : la déclaration
+// La réponse de Djéneba est envoyée à /api/reponse puis stockée dans Upstash Redis.
+---
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="Pour toi 🌻">
+    <title>Pour toi 🌻</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Gaegu:wght@400;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+<style is:global>
+  :root {
+    --rose: #ff8fb8;
+    --rose-fonce: #e0457f;
+    --rose-pale: #ffd9e8;
+    --blanc: #fffafc;
+    --coeur: #6b1b3a;
+    --font-titre: "Bagel Fat One", "Arial Rounded MT Bold", system-ui, sans-serif;
+    --font-texte: "Gaegu", "Comic Sans MS", cursive;
+
+    --cup: 96px;      /* taille des cupidons */
+    --over: 24px;     /* combien un cupidon dépasse du papyrus */
+    --pad: 1.6rem;    /* marge intérieure du papyrus */
+  }
+  * { box-sizing: border-box; margin: 0; }
+  [hidden] { display: none !important; }
+  html, body { min-height: 100%; }
+  body {
+    min-height: 100vh;
+    background: var(--rose-pale);
+    color: var(--coeur);
+    font-family: var(--font-texte);
+    font-size: 1.3rem;
+    line-height: 1.45;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    overflow-x: hidden;
+  }
+
+  /* =====================================================
+     COUCHE 1 — PHOTO DE FOND (tout en bas, fixe)
+     Image : public/fond.jpg
+     ===================================================== */
+  .layer-photo {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      url("/fond.jpg") center bottom / cover no-repeat,
+      linear-gradient(180deg, var(--rose) 0%, var(--rose-pale) 55%, #fffafc 100%);
+  }
+  .layer-photo::after { /* léger voile rose sur la photo */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 143, 184, .15);
+    pointer-events: none;
+  }
+
+  /* =====================================================
+     COUCHE 2 — PAPYRUS + IMAGES (cupidons)
+     ===================================================== */
+  .papyrus {
+    position: relative;
+    z-index: 1;
+    width: min(100% - 5rem, 460px);
+    margin: 4rem auto 16rem;
+  }
+  .ombre { /* l'ombre suit les bords déchirés */
+    position: absolute;
+    inset: 0;
+    filter: drop-shadow(0 10px 16px rgba(107, 27, 58, .35));
+  }
+  .feuille {
+    position: absolute;
+    inset: 0;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.03 .7' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .33 0 0 0 0 .25 0 0 0 .5 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      linear-gradient(160deg, #fff6ee 0%, #ffe6ef 60%, #ffdceb 100%);
+    box-shadow: inset 0 0 50px rgba(190, 110, 80, .28);
+  }
+  .contenu {
+    position: relative;
+    padding: 5rem var(--pad) 3.5rem;
+  }
+
+  h1 {
+    font-family: var(--font-titre);
+    font-weight: 400;
+    font-size: clamp(2.5rem, 11vw, 3.4rem);
+    line-height: 1;
+    color: var(--rose-fonce);
+    text-shadow: 3px 3px 0 #fff;
+    transform: rotate(-3deg);
+    margin-bottom: 2rem;
+  }
+  .contenu p { margin-bottom: 1rem; }
+  .contenu strong { color: var(--rose-fonce); }
+  .contenu .aussi {
+    clear: left;
+    text-align: center;
+    margin: .3rem 0 0;
+    font-family: var(--font-titre);
+    font-size: 1.5rem;
+    line-height: 1.2;
+    color: var(--rose-fonce);
+    text-shadow: 2px 2px 0 #fff;
+  }
+  .contenu .aussi {
+    clear: left;              /* descend sous le premier cupidon pour être lisible */
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: var(--rose-fonce);
+    text-shadow: 2px 2px 0 #fff;
+    margin: .15rem 0 1rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-family: var(--font-titre);
+    font-weight: 400;
+    font-size: 1.8rem;
+    line-height: 1.1;
+    color: var(--rose-fonce);
+    margin-top: 1.2rem;
+  }
+
+  /* ===== Cupidons ===== */
+  .cupidon {
+    width: var(--cup);
+    height: var(--cup);
+    display: grid;
+    place-items: center;
+    animation: flotte 4s ease-in-out infinite;
+  }
+  .cupidon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cupidon.manque {
+    background: rgba(255,255,255,.6);
+    border-radius: 10px;
+    font-size: .8rem;
+    text-align: center;
+    color: var(--rose-fonce);
+  }
+  /* gauche : dépasse du bord gauche, le texte l'entoure */
+  .c1 { float: left; margin: .6rem 1rem 1rem calc(-1 * (var(--pad) + var(--over))); }
+  /* droite : dépasse du bord droit */
+  .c2 { float: right; margin: .8rem calc(-1 * (var(--pad) + var(--over))) .8rem 1rem; animation-delay: -1.3s; }
+  /* bas gauche : dans le papyrus */
+  .c3 { width: 120px; height: 100px; flex: none; margin-right: 1rem; margin-top: .2rem; animation-delay: -2.6s; }
+
+  @keyframes flotte {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50% { transform: translateY(-10px) rotate(4deg); }
+  }
+
+  /* ===== 3 rectangles : Oui / Non / Peut-être ===== */
+  .choix {
+    clear: both;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .6rem;
+    margin-top: 1.4rem;
+  }
+  .choix button {
+    border: 0;
+    border-radius: 6px;
+    padding: .9rem .5rem;
+    font: inherit;
+    font-weight: 700;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: transform .15s;
+  }
+  .choix button:hover { transform: translateY(-2px); }
+  .choix button:focus-visible { outline: 3px solid var(--coeur); outline-offset: 3px; }
+  #oui  { background: var(--rose-fonce); color: #fff; }
+  #non  { background: var(--rose); color: var(--coeur); }
+  #peut { background: #fff; color: var(--rose-fonce); grid-column: 1 / -1; }
+
+  /* quand "Non" a disparu : Oui et Peut-être se partagent la ligne */
+  .choix.sans-non #peut { grid-column: auto; }
+  .choix.gagne #oui { grid-column: 1 / -1; }
+
+  #non.secoue { animation: secoue .3s; }
+  @keyframes secoue { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  #non.part { animation: part .35s forwards; }
+  @keyframes part { to { opacity: 0; transform: scale(.6); } }
+
+  .bas { display: flex; align-items: center; gap: .8rem; margin-top: 1.6rem; }
+  .reponse { font-family: var(--font-titre); font-size: 1.3rem; line-height: 1.2; color: var(--coeur); }
+
+  /* ===== Bouton musique ===== */
+  .musique {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + .8rem);
+    right: .8rem;
+    z-index: 6;
+    width: 3rem;
+    height: 3rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--rose-fonce);
+    color: #fff;
+    font-size: 1.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(107, 27, 58, .3);
+  }
+  .musique:focus-visible { outline: 3px solid var(--coeur); outline-offset: 3px; }
+
+  /* ===== Coeurs qui montent quand on dit oui ===== */
+  .coeur-vol {
+    position: fixed; bottom: -2rem; font-size: 2rem; pointer-events: none; z-index: 5;
+    animation: monte 3.5s ease-in forwards;
+  }
+  @keyframes monte { to { transform: translateY(-110vh) rotate(25deg); opacity: 0; } }
+
+  /* ===== Écran de chargement ===== */
+  .loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, #fffafc 0%, var(--rose-pale) 60%, #ffd9e8 100%);
+    transition: opacity .6s ease, visibility .6s ease;
+    text-align: center;
+    padding: 1rem;
+  }
+  .loader.hide {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .loader-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .8rem;
+    animation: loader-pulse 1.8s ease-in-out infinite;
+  }
+  .loader-heart {
+    font-size: clamp(3rem, 12vw, 5rem);
+    filter: drop-shadow(0 12px 20px rgba(224, 69, 127, .25));
+    animation: loader-bounce 1.8s ease-in-out infinite;
+  }
+  .loader-text {
+    font-family: var(--font-titre);
+    color: var(--rose-fonce);
+    text-shadow: 2px 2px 0 #fff;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: clamp(.9rem, 3vw, 1.2rem);
+  }
+  .loader-hint {
+    font-family: var(--font-texte);
+    font-size: 1.1rem;
+    color: var(--coeur);
+    background: rgba(255, 255, 255, .65);
+    border: 2px dashed var(--rose);
+    border-radius: 40px;
+    padding: .45rem 1.1rem;
+    animation: loader-pulse 2s ease-in-out infinite;
+    box-shadow: 0 6px 14px rgba(107, 27, 58, .12);
+  }
+  @keyframes loader-bounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-12px) scale(1.08); }
+  }
+  @keyframes loader-pulse {
+    0%, 100% { opacity: .8; }
+    50% { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cupidon, .coeur-vol, #non.secoue, .loader-inner, .loader-heart, .loader-hint { animation: none; }
+    .loader { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COUCHE 1 : photo de fond (public/fond.jpg) -->
+<div class="layer-photo" aria-hidden="true"></div>
+
+<!-- COUCHE 2 : papyrus + cupidons -->
+<main class="papyrus">
+  <div class="ombre"><div class="feuille" id="feuille"></div></div>
+
+  <div class="contenu">
+    <h1>Hey, Djéneba</h1>
+
+    <p>Je n'ai jamais été très fort pour dire les choses en face, alors j'ai fait une page.</p>
+
+    <div class="cupidon c1"><img src="/cupidon1.jpg" alt="Petit cupidon"></div>
+
+    <p>Tu es <strong>radieuse</strong>, <strong>rayonnante</strong>… tu illumines tout sur ton passage.</p>
+    <p style="margin-top:.4rem">Tu es <strong>le tournesol plein d'éclat au soleil</strong> : le monde se tourne vers toi, et</p>
+    <p class="aussi">moi aussi 🌻</p>
+    <p style="margin-top:.8rem">Est-ce que tu veux sortir avec moi&nbsp;?</p>
+
+    <div class="cupidon c2"><img src="/cupidon2.jpg" alt="Petit cupidon"></div>
+
+    <h2 style="margin-top:1.8rem">Est-ce que tu veux sortir avec moi&nbsp;?</h2>
+
+    <div class="choix" id="choix">
+      <button id="oui" type="button">Oui 💗</button>
+      <button id="non" type="button">Non</button>
+      <button id="peut" type="button">Peut-être</button>
+    </div>
+
+    <div class="bas">
+      <div class="cupidon c3"><img src="/cupidon3.jpg" alt="Petit cupidon"></div>
+      <p class="reponse" id="reponse" aria-live="polite"></p>
+    </div>
+  </div>
+</main>
+
+<!-- Écran de chargement -->
+<div id="loader" class="loader" aria-live="polite" aria-label="Chargement en cours">
+  <div class="loader-inner">
+    <div class="loader-heart">🌻</div>
+    <div class="loader-text">Chargement...</div>
+    <div class="loader-hint">Touche ou clique pour lancer la musique 🎵</div>
+  </div>
+</div>
+
+<!-- Réponse enregistrée aussi localement (visible dans l'onglet Éléments des Dev tools) -->
+<input type="hidden" id="reponse-cachee" name="reponse" value="">
+
+<!-- Musique -->
+<audio id="musique" src="/musique.mp3" loop preload="metadata"></audio>
+<button id="btn-musique" class="musique" type="button" aria-label="Activer ou couper la musique" hidden>🔇</button>
+
+<script>
+  // Bords du papyrus déchirés (forme générée une fois, toujours la même)
+  (function () {
+    let seed = 42;
+    const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const j = () => 2 + Math.round(r() * 9);
+    const p = [];
+    for (let x = 0; x <= 100; x += 4)  p.push(`${x}% ${j()}px`);
+    for (let y = 4; y <= 100; y += 3)  p.push(`calc(100% - ${j()}px) ${y}%`);
+    for (let x = 96; x >= 0; x -= 4)   p.push(`${x}% calc(100% - ${j()}px)`);
+    for (let y = 97; y >= 4; y -= 3)   p.push(`${j()}px ${y}%`);
+    document.getElementById("feuille").style.clipPath = `polygon(${p.join(",")})`;
+  })();
+
+  // Cupidon introuvable : case avec le nom du fichier attendu
+  document.querySelectorAll(".cupidon img").forEach(img => {
+    img.addEventListener("error", () => {
+      img.parentElement.classList.add("manque");
+      img.replaceWith(document.createTextNode(img.getAttribute("src")));
+    });
+  });
+
+  // ===== Musique =====
+  const MUSIQUE_AUTO = true; // true = démarre au premier clic/toucher sur la page
+  const audio = document.getElementById("musique");
+  const btnMus = document.getElementById("btn-musique");
+
+  audio.addEventListener("canplay", () => { btnMus.hidden = false; }, { once: true }); // bouton visible seulement si le mp3 existe
+  const majBtn = () => { btnMus.textContent = audio.paused ? "🔇" : "🎵"; };
+  audio.addEventListener("play", majBtn);
+  audio.addEventListener("pause", majBtn);
+  btnMus.addEventListener("click", () => {
+    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+  });
+  function demarrerMusique(e) {
+    if (e.target.closest("#btn-musique")) return;
+    document.removeEventListener("pointerdown", demarrerMusique);
+    audio.play().catch(() => {});
+  }
+  if (MUSIQUE_AUTO) document.addEventListener("pointerdown", demarrerMusique);
+
+  // ===== Réponse enregistrée =====
+  // Envoyée au serveur (/api/reponse) + visible localement :
+  //   Console : resultat   |   Application > Local Storage : reponse_declaration
+  //   Éléments : <input id="reponse-cachee" value="...">
+  let sessionId = "";
+  try {
+    sessionId = localStorage.getItem("declaration_sid") || "";
+    if (!sessionId) {
+      sessionId =
+        (crypto.randomUUID && crypto.randomUUID()) ||
+        `s-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      localStorage.setItem("declaration_sid", sessionId);
+    }
+  } catch (e) {
+    sessionId = `s-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+  window.resultat = { sessionId, reponse: null, clicsNon: 0, historique: [] };
+
+  function envoyerAuServeur() {
+    fetch("/api/reponse", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(window.resultat),
+      keepalive: true,
+    }).catch(() => {});
+  }
+
+  function enregistrer(valeur) {
+    window.resultat.reponse = valeur;
+    window.resultat.historique.push({ choix: valeur, heure: new Date().toISOString() });
+    document.getElementById("reponse-cachee").value = valeur;
+    try { localStorage.setItem("reponse_declaration", JSON.stringify(window.resultat)); } catch (e) {}
+    console.log("[déclaration] réponse :", valeur);
+    envoyerAuServeur();
+  }
+
+  const choix = document.getElementById("choix");
+  const oui = document.getElementById("oui");
+  const non = document.getElementById("non");
+  const peut = document.getElementById("peut");
+  const reponse = document.getElementById("reponse");
+
+  // NON : ne marche pas. Au 3e clic il disparaît, il reste Oui et Peut-être.
+  let clicsNon = 0;
+  non.addEventListener("click", () => {
+    clicsNon++;
+    window.resultat.clicsNon = clicsNon;
+    enregistrer("non");
+    if (clicsNon > 2) {
+      non.classList.add("part");
+      setTimeout(() => {
+        non.hidden = true;
+        choix.classList.add("sans-non");
+      }, 350);
+      return;
+    }
+    non.classList.remove("secoue");
+    void non.offsetWidth;
+    non.classList.add("secoue");
+  });
+
+  // PEUT-ÊTRE
+  peut.addEventListener("click", () => {
+    reponse.textContent = "Femme dèh ! 🌻";
+    enregistrer("peut-etre");
+  });
+
+  // OUI : pluie de coeurs
+  oui.addEventListener("click", () => {
+    reponse.textContent = "Je savais que tu dirais oui 🌻💘";
+    enregistrer("oui");
+    non.hidden = true;
+    peut.hidden = true;
+    choix.classList.add("gagne");
+    for (let i = 0; i < 30; i++) {
+      const c = document.createElement("span");
+      c.className = "coeur-vol";
+      c.textContent = ["💗", "💖", "🌸", "💘"][i % 4];
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.animationDelay = Math.random() * 1.5 + "s";
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 6000);
+    }
+  }); // fin bouton Oui
+
+  // Le loader attend la police ET la musique, puis libère la page
+  let loaderNode = document.getElementById("loader");
+  function cacherLoader() {
+    if (!loaderNode) return;
+    loaderNode.classList.add("hide");
+    setTimeout(() => loaderNode.remove(), 700);
+    loaderNode = null;
+  }
+
+  const fontsOk = (document.fonts && document.fonts.ready) || Promise.resolve();
+  const musiqueOk = new Promise((res) => {
+    if (audio.readyState >= 2) return res();
+    const fin = () => res();
+    audio.addEventListener("canplaythrough", fin, { once: true });
+    audio.addEventListener("canplay", fin, { once: true });
+    audio.addEventListener("error", fin, { once: true });
+    setTimeout(fin, 2500); // n'attend jamais trop sur la musique
+  });
+
+  Promise.all([fontsOk.catch(() => {}), musiqueOk])
+    .then(cacherLoader)
+    .catch(cacherLoader);
+
+  // Filet de sécurité absolu au cas où quelque chose serait bloqué
+  setTimeout(cacherLoader, 4000);
+</script>
+</body>
+</html>

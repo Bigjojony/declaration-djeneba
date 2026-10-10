@@ -1,0 +1,125 @@
+---
+import { getRedis, getAdminKey } from "../../lib/redis";
+
+export const prerender = false;
+
+// Page secrète : accessible uniquement via /r/<ADMIN_KEY>
+const { key } = Astro.params;
+const adminKey = getAdminKey();
+if (!adminKey || key !== adminKey) {
+  return new Response("Not found", { status: 404 });
+}
+
+const libelle: Record<string, string> = { oui: "Oui 💗", non: "Non", "peut-etre": "Peut-être" };
+const classe: Record<string, string> = { oui: "oui", non: "non", "peut-etre": "peut" };
+
+let reponses: any[] = [];
+let erreur: string | null = null;
+
+try {
+  const redis = getRedis();
+  const obj = await redis.hgetall<Record<string, any>>("reponses");
+  reponses = Object.values(obj ?? {})
+    .map((r) => (typeof r === "string" ? JSON.parse(r) : r))
+    .sort((a, b) => (a?.date < b?.date ? 1 : -1));
+} catch (e) {
+  erreur = String(e);
+}
+
+const formatDate = (d?: string) => (d || "").replace("T", " ").slice(0, 19);
+const formatHisto = (r: any) =>
+  (r?.historique || [])
+    .map((h: any) => `${h.choix} (${(h.heure || "").slice(11, 19)})`)
+    .join(", ") || "—";
+---
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Réponses</title>
+<style is:global>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #fff5f8;
+    color: #3b1a28;
+    padding: 2rem;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: .4rem; }
+  .bar { margin: 1rem 0; }
+  button {
+    font: inherit;
+    padding: .6rem 1rem;
+    border-radius: 8px;
+    border: 0;
+    background: #e0457f;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover { opacity: .9; }
+  .info { margin: 1rem 0; font-weight: 600; }
+  .err { color: #b00020; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td {
+    border: 1px solid #f3c2d7;
+    padding: .5rem .6rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #ffe1ee; }
+  tr:nth-child(even) td { background: #fffafc; }
+  .oui { color: #1a7f37; font-weight: 700; }
+  .non { color: #b00020; font-weight: 700; }
+  .peut { color: #b06a00; font-weight: 700; }
+</style>
+</head>
+<body>
+  <h1>Réponses de la déclaration</h1>
+
+  <div class="bar">
+    <button id="refresh" type="button">Rafraîchir</button>
+  </div>
+
+  {erreur ? (
+    <p class="err">Erreur de chargement : {erreur}</p>
+  ) : reponses.length === 0 ? (
+    <p class="info">Aucune réponse pour le moment.</p>
+  ) : (
+    <>
+      <p class="info">{reponses.length} réponse(s) — une ligne par personne.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Réponse</th>
+            <th>Date</th>
+            <th>Historique des clics</th>
+            <th>Appareil (user-agent)</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reponses.map((r, i) => (
+            <tr>
+              <td>{i + 1}</td>
+              <td class={classe[r.reponse] || ""}>{libelle[r.reponse] || r.reponse || "—"}</td>
+              <td>{formatDate(r.date)}</td>
+              <td>{formatHisto(r)}</td>
+              <td>{r.ua || "—"}</td>
+              <td>{r.ip || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
+<script is:inline>
+  document.getElementById("refresh").addEventListener("click", () => location.reload());
+</script>
+</body>
+</html>

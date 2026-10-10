@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pour toi 🌻</title>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rose: #ff8fb8;
+    --rose-fonce: #e0457f;
+    --rose-pale: #ffd9e8;
+    --blanc: #fffafc;
+    --coeur: #6b1b3a;
+    --font-titre: "Bagel Fat One", "Arial Rounded MT Bold", system-ui, sans-serif;
+    --font-texte: "Gaegu", "Comic Sans MS", cursive;
+
+    --cup: 96px;      /* taille des cupidons */
+    --over: 40px;     /* combien un cupidon dépasse du papyrus */
+    --pad: 1.6rem;    /* marge intérieure du papyrus */
+  }
+  * { box-sizing: border-box; margin: 0; }
+  [hidden] { display: none !important; }
+  html, body { min-height: 100%; }
+  body {
+    min-height: 100vh;
+    background: var(--rose-pale);
+    color: var(--coeur);
+    font-family: var(--font-texte);
+    font-size: 1.3rem;
+    line-height: 1.45;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    overflow-x: hidden;
+  }
+
+  /* =====================================================
+     COUCHE 1 — PHOTO DE FOND (tout en bas, fixe)
+     Mets ta photo dans le dossier sous le nom fond.jpg
+     ===================================================== */
+  .layer-photo {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      url("fond.jpg") center bottom / cover no-repeat,
+      linear-gradient(180deg, var(--rose) 0%, var(--rose-pale) 55%, #fffafc 100%);
+  }
+  .layer-photo::after { /* léger voile rose sur la photo */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 143, 184, .15);
+    pointer-events: none;
+  }
+
+  /* =====================================================
+     COUCHE 2 — PAPYRUS + IMAGES (cupidons)
+     ===================================================== */
+  .papyrus {
+    position: relative;
+    z-index: 1;
+    width: min(100% - 5rem, 460px);
+    margin: 3rem auto 14rem;
+  }
+  .ombre { /* l'ombre suit les bords déchirés */
+    position: absolute;
+    inset: 0;
+    filter: drop-shadow(0 10px 16px rgba(107, 27, 58, .35));
+  }
+  .feuille {
+    position: absolute;
+    inset: 0;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.03 .7' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .33 0 0 0 0 .25 0 0 0 .5 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      linear-gradient(160deg, #fff6ee 0%, #ffe6ef 60%, #ffdceb 100%);
+    box-shadow: inset 0 0 50px rgba(190, 110, 80, .28);
+  }
+  .contenu {
+    position: relative;
+    padding: 4rem var(--pad) 3rem;
+  }
+
+  h1 {
+    font-family: var(--font-titre);
+    font-weight: 400;
+    font-size: clamp(2.5rem, 11vw, 3.4rem);
+    line-height: 1;
+    color: var(--rose-fonce);
+    text-shadow: 3px 3px 0 #fff;
+    transform: rotate(-3deg);
+    margin-bottom: 2rem;
+  }
+  .contenu p { margin-bottom: 1rem; }
+  .contenu strong { color: var(--rose-fonce); }
+  .contenu .aussi {
+    clear: left;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: var(--rose-fonce);
+    text-shadow: 2px 2px 0 #fff;
+    margin: .15rem 0 1rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-family: var(--font-titre);
+    font-weight: 400;
+    font-size: 1.8rem;
+    line-height: 1.1;
+    color: var(--rose-fonce);
+    margin-top: 1.2rem;
+  }
+
+  /* ===== Cupidons ===== */
+  .cupidon {
+    width: var(--cup);
+    height: var(--cup);
+    display: grid;
+    place-items: center;
+    animation: flotte 4s ease-in-out infinite;
+  }
+  .cupidon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cupidon.manque {
+    background: rgba(255,255,255,.6);
+    border-radius: 10px;
+    font-size: .8rem;
+    text-align: center;
+    color: var(--rose-fonce);
+  }
+  /* gauche : dépasse du bord gauche, le texte l'entoure */
+  .c1 { float: left; margin: .2rem .8rem .4rem calc(-1 * (var(--pad) + var(--over))); }
+  /* droite : dépasse du bord droit */
+  .c2 { float: right; margin: .2rem calc(-1 * (var(--pad) + var(--over))) .4rem .8rem; animation-delay: -1.3s; }
+  /* bas gauche : dans le papyrus */
+  .c3 { width: 120px; height: 100px; flex: none; animation-delay: -2.6s; }
+
+  @keyframes flotte {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50% { transform: translateY(-10px) rotate(4deg); }
+  }
+
+  /* ===== 3 rectangles : Oui / Non / Peut-être ===== */
+  .choix {
+    clear: both;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .6rem;
+    margin-top: 1.4rem;
+  }
+  .choix button {
+    border: 0;
+    border-radius: 6px;
+    padding: .9rem .5rem;
+    font: inherit;
+    font-weight: 700;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: transform .15s;
+  }
+  .choix button:hover { transform: translateY(-2px); }
+  .choix button:focus-visible { outline: 3px solid var(--coeur); outline-offset: 3px; }
+  #oui  { background: var(--rose-fonce); color: #fff; }
+  #non  { background: var(--rose); color: var(--coeur); }
+  #peut { background: #fff; color: var(--rose-fonce); grid-column: 1 / -1; }
+
+  /* quand "Non" a disparu : Oui et Peut-être se partagent la ligne */
+  .choix.sans-non #peut { grid-column: auto; }
+  .choix.gagne #oui { grid-column: 1 / -1; }
+
+  #non.secoue { animation: secoue .3s; }
+  @keyframes secoue { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  #non.part { animation: part .35s forwards; }
+  @keyframes part { to { opacity: 0; transform: scale(.6); } }
+
+  .bas { display: flex; align-items: center; gap: .8rem; margin-top: 1.6rem; }
+  .reponse { font-family: var(--font-titre); font-size: 1.3rem; line-height: 1.2; color: var(--coeur); }
+
+  /* ===== Bouton musique ===== */
+  .musique {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + .8rem);
+    right: .8rem;
+    z-index: 6;
+    width: 3rem;
+    height: 3rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--rose-fonce);
+    color: #fff;
+    font-size: 1.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(107, 27, 58, .3);
+  }
+  .musique:focus-visible { outline: 3px solid var(--coeur); outline-offset: 3px; }
+
+  /* ===== Coeurs qui montent quand on dit oui ===== */
+  .coeur-vol {
+    position: fixed; bottom: -2rem; font-size: 2rem; pointer-events: none; z-index: 5;
+    animation: monte 3.5s ease-in forwards;
+  }
+  @keyframes monte { to { transform: translateY(-110vh) rotate(25deg); opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cupidon, .coeur-vol, #non.secoue { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COUCHE 1 : photo de fond (fond.jpg) -->
+<div class="layer-photo" aria-hidden="true"></div>
+
+<!-- COUCHE 2 : papyrus + cupidons -->
+<main class="papyrus">
+  <div class="ombre"><div class="feuille" id="feuille"></div></div>
+
+  <div class="contenu">
+    <h1>Hey, Djéneba</h1>
+
+    <p>Je n'ai jamais été très fort pour dire les choses en face, alors j'ai fait une page.</p>
+
+    <div class="cupidon c1"><img src="public/cupidon1.jpg" alt="Petit cupidon"></div>
+
+    <p>Tu es <strong>radieuse</strong>, <strong>rayonnante</strong>… tu illumines tout sur ton passage.</p>
+    <p>Tu es <strong>le tournesol plein d'éclat au soleil</strong> : le monde se tourne vers toi, et</p>
+    <p class="aussi">moi aussi 🌻</p>
+    <p style="margin-top:.6rem">Est-ce que tu veux sortir avec moi&nbsp;?</p>
+
+    <div class="choix" id="choix">
+      <button id="oui" type="button">Oui 💗</button>
+      <button id="non" type="button">Non</button>
+      <button id="peut" type="button">Peut-être</button>
+    </div>
+
+    <div class="bas">
+      <div class="cupidon c3"><img src="public/cupidon3.jpg" alt="Petit cupidon"></div>
+      <p class="reponse" id="reponse" aria-live="polite"></p>
+    </div>
+  </div>
+</main>
+
+<!-- Réponse enregistrée ici (visible dans l'onglet Éléments des Dev tools) -->
+<input type="hidden" id="reponse-cachee" name="reponse" value="">
+
+<!-- Musique : mets ton fichier sous le nom musique.mp3 (ou change le src) -->
+<audio id="musique" src="musique.mp3" loop preload="metadata"></audio>
+<button id="btn-musique" class="musique" type="button" aria-label="Activer ou couper la musique" hidden>🔇</button>
+
+<script>
+  // Bords du papyrus déchirés (forme générée une fois, toujours la même)
+  (function () {
+    let seed = 42;
+    const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const j = () => 2 + Math.round(r() * 9);
+    const p = [];
+    for (let x = 0; x <= 100; x += 4)  p.push(`${x}% ${j()}px`);
+    for (let y = 4; y <= 100; y += 3)  p.push(`calc(100% - ${j()}px) ${y}%`);
+    for (let x = 96; x >= 0; x -= 4)   p.push(`${x}% calc(100% - ${j()}px)`);
+    for (let y = 97; y >= 4; y -= 3)   p.push(`${j()}px ${y}%`);
+    document.getElementById("feuille").style.clipPath = `polygon(${p.join(",")})`;
+  })();
+
+  // Cupidon introuvable : case avec le nom du fichier attendu
+  document.querySelectorAll(".cupidon img").forEach(img => {
+    img.addEventListener("error", () => {
+      img.parentElement.classList.add("manque");
+      img.replaceWith(document.createTextNode(img.getAttribute("src")));
+    });
+  });
+
+  // ===== Musique =====
+  const MUSIQUE_AUTO = true; // true = démarre au premier clic/toucher sur la page
+  const audio = document.getElementById("musique");
+  const btnMus = document.getElementById("btn-musique");
+
+  audio.addEventListener("canplay", () => { btnMus.hidden = false; }, { once: true }); // bouton visible seulement si le mp3 existe
+  const majBtn = () => { btnMus.textContent = audio.paused ? "🔇" : "🎵"; };
+  audio.addEventListener("play", majBtn);
+  audio.addEventListener("pause", majBtn);
+  btnMus.addEventListener("click", () => {
+    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+  });
+  function demarrerMusique(e) {
+    if (e.target.closest("#btn-musique")) return;
+    document.removeEventListener("pointerdown", demarrerMusique);
+    audio.play().catch(() => {});
+  }
+  if (MUSIQUE_AUTO) document.addEventListener("pointerdown", demarrerMusique);
+
+  // ===== Réponse enregistrée (visible dans les Dev tools) =====
+  // Console : resultat   |   Application > Local Storage : reponse_declaration
+  // Éléments : <input id="reponse-cachee" value="...">
+  window.resultat = { reponse: null, clicsNon: 0, historique: [] };
+  function enregistrer(valeur) {
+    resultat.reponse = valeur;
+    resultat.historique.push({ choix: valeur, heure: new Date().toISOString() });
+    document.getElementById("reponse-cachee").value = valeur;
+    try { localStorage.setItem("reponse_declaration", JSON.stringify(resultat)); } catch (e) {}
+    console.log("[déclaration] réponse :", valeur);
+  }
+
+  const choix = document.getElementById("choix");
+  const oui = document.getElementById("oui");
+  const non = document.getElementById("non");
+  const peut = document.getElementById("peut");
+  const reponse = document.getElementById("reponse");
+
+  // NON : ne marche pas. Au 3e clic il disparaît, il reste Oui et Peut-être.
+  let clicsNon = 0;
+  non.addEventListener("click", () => {
+    clicsNon++;
+    resultat.clicsNon = clicsNon;
+    enregistrer("non");
+    if (clicsNon > 2) {
+      non.classList.add("part");
+      setTimeout(() => {
+        non.hidden = true;
+        choix.classList.add("sans-non");
+      }, 350);
+      return;
+    }
+    non.classList.remove("secoue");
+    void non.offsetWidth;
+    non.classList.add("secoue");
+  });
+
+  // PEUT-ÊTRE
+  peut.addEventListener("click", () => {
+    reponse.textContent = "Peut-être ? Je te laisse réfléchir 🌻";
+    enregistrer("peut-etre");
+  });
+
+  // OUI : pluie de coeurs
+  oui.addEventListener("click", () => {
+    reponse.textContent = "Je savais que tu dirais oui 🌻💘";
+    enregistrer("oui");
+    non.hidden = true;
+    peut.hidden = true;
+    choix.classList.add("gagne");
+    for (let i = 0; i < 30; i++) {
+      const c = document.createElement("span");
+      c.className = "coeur-vol";
+      c.textContent = ["💗", "💖", "🌸", "💘"][i % 4];
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.animationDelay = Math.random() * 1.5 + "s";
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 6000);
+    }
+  });
+</script>
+</body>
+</html>
